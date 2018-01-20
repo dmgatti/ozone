@@ -16,11 +16,13 @@ The [ozone layer](https://en.wikipedia.org/wiki/Ozone_layer) in the [stratospher
 
 ## Tutorial Goals
 
-In this tutorial, we will analyze ground level ozone data from monitoring sites across Maine collected between 2000 and 2017. The raw data was downloaded from the  [U.S.E.P.A.](https://aqs.epa.gov/aqsweb/airdata/download_files.html). In the process, we will learn three skills:
+In this tutorial, we will analyze ground level ozone data from monitoring sites across Maine collected between 2000 and 2017. The raw data was downloaded from the  [U.S.E.P.A.](https://aqs.epa.gov/aqsweb/airdata/download_files.html). In the process, we will learn five skills:
 
-1. subsetting data by rows to focus on specfic locations or times,
-2. summarizing the subsets of the data to compare values between them,
-3. plotting whole or parts of the data to visualize relationships in space and time.
+1. reading a data set from the disk into memory,
+2. filtering data by rows to focus on specfic locations or times,
+3. smoothing data to reveal trends,
+4. coloring points by categorical values,
+5. plotting categorical values in separate panels.
 
 # Data Analysis
 
@@ -32,7 +34,7 @@ library(ggmap)
 ```
 
 
-# Reading in Data
+## Reading in Data
 
 First, we will read in ozone data in the State of Maine collected between 2000 and 2017. `read_csv` is a function that reads in a Comma Separated Variable (csv) file, in which each column is separated by a comma. The `<-` symbol is an assignment operator that assigns the contents of the file to the variable `data`. The second line converts the months to a categorical variable so that we can use it when plotting below.
 
@@ -126,6 +128,8 @@ ggplot(data = ozone2002, mapping = aes(x = hour, y = ozone_ppm)) +
 
 This plot is the same as the plot above, but with less typing.
 
+## Coloring Data
+
 The view above plots ozone values for all sites. But we have 10 sites and it would be nice to see the trend across all sites. One way to do this is to add multiple smoothing lines, each colored by site. To do this, we add a `color` argument to the [aesthetics](https://www.rdocumentation.org/packages/ggplot2/versions/2.2.1/topics/aes).
 
 ```{r}
@@ -175,20 +179,29 @@ ggplot(data, aes(hour, ozone_ppm, color = site_name)) +
   facet_wrap(~month)
 ```
 
+* Now try swapping the `month` and `site_name` variables.  What does this plot tell us that is differen from the first plot?
+
 This plot tells us a lot about the daily changes in ozone in each month or each site. 
 
+## Geographical Plotting
+
+This is just a quick preview of some of the geographical plotting that is possible in R. The plot below shows the location of the ozone sampling sites. 
 
 ```{r}
 sites = distinct(data.frame(data$lon, data$lat))
 map = get_googlemap("Bangor, Maine", marker = sites, zoom = 7)
 ggmap(map)
 ```
+
+This plot adds the color of the maximun ozone value to each site.
+
 ```{r}
 ozone2002_mon = data %>% group_by(site_name, month, lat, lon) %>% summarize(maxoz = max(ozone_ppm))
 ggmap(map) + 
 geom_point(data = filter(ozone2002_mon, month == 8), aes(lon, lat, color = maxoz, fill = maxoz))
 ```
 
+And finally, this plot creates a smoothed contours plot of maximum ozone values for each site.
 
 ```{r}
 ozone2002_mon = data %>% group_by(site_name, month, lat, lon) %>% summarize(maxoz = max(ozone_ppm))
