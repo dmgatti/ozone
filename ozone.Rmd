@@ -1,0 +1,201 @@
+---
+title: "Ground Level Ozone"
+author: "Daniel Gatti"
+output: html_notebook
+---
+
+# Introduction
+
+## Ground Level Ozone
+
+The [ozone layer](https://en.wikipedia.org/wiki/Ozone_layer) in the [stratosphere](https://en.wikipedia.org/wiki/Stratosphere) protects us from the damaging effects of ultraviolet radiation. [Ozone](https://en.wikipedia.org/wiki/Ozone) (O~3~) in the stratosphere is beneficial and protective for life on Earth.
+
+![Figure 1. Distribution of atmospheric ozone.](https://upload.wikimedia.org/wikipedia/commons/e/ec/Atmospheric_ozone.svg)
+
+[Ground level ozone] occurs near the Earth's surface and can be harmful to [people](http://www.euro.who.int/__data/assets/pdf_file/0005/112199/E79097.pdf) and the [environment](https://www.ncbi.nlm.nih.gov/pubmed/16644230). Most ground level ozone is created when carbon monoxide (CO), nitrogen oxides (NOx), and hydrocarbons react together when exposed to sunlight. Ozone levels in the summer can reach unhealthy levels. The United States Environmental Protection Agency (U.S.E.P.A.) posts air pollution maps and forecasts at the [AirNow](https://www.airnow.gov/) site. Surprisingly, seemingly pristine locations, such as [Acadia National Park](https://www.nps.gov/acad/learn/nature/airquality.htm), can experience high summertime ozone levels.
+
+## Tutorial Goals
+
+In this tutorial, we will analyze ground level ozone data from monitoring sites across Maine collected between 2000 and 2017. The raw data was downloaded from the  [U.S.E.P.A.](https://aqs.epa.gov/aqsweb/airdata/download_files.html). In the process, we will learn three skills:
+
+1. subsetting data by rows to focus on specfic locations or times,
+2. summarizing the subsets of the data to compare values between them,
+3. plotting whole or parts of the data to visualize relationships in space and time.
+
+# Data Analysis
+
+## Load Software Libraries
+
+```{r setup}
+library(tidyverse)
+library(ggmap)
+```
+
+
+# Reading in Data
+
+First, we will read in ozone data in the State of Maine collected between 2000 and 2017. `read_csv` is a function that reads in a Comma Separated Variable (csv) file, in which each column is separated by a comma. The `<-` symbol is an assignment operator that assigns the contents of the file to the variable `data`. The second line converts the months to a categorical variable so that we can use it when plotting below.
+
+```{r read_data,warning=FALSE,message=FALSE}
+data <- read_csv("ozone_aqs_2000_2017.csv.gz", trim_ws = TRUE, progress = FALSE)
+data <- mutate(data, month = factor(month, levels = 1:12))
+```
+
+Look in the `Environment` tab in the upper right of the screen for an object called `data`. How many rows and columns does the data have?
+
+`data` is a large table with measurements in rows and variables in columns. Since `data` contains over 900,000 rows, it is difficult to look at the whole table. But we can look at the contents of the first few rows using the `head` command.
+
+```{r head_data}
+head(data)
+```
+
+In a data set this size, it's impossible to look at the entire table. Instead, we need to summarize the data in ways that help us to understand it. Some questions that we might have are:
+
+How many sites are there? To answer this, we use the [distinct](http://dplyr.tidyverse.org/reference/distinct.html) command.
+
+```{r}
+distinct(data, site_name)
+```
+
+**Exercise:** What years are covered?
+
+```{r eval=FALSE}
+distinct(data, ______)
+```
+
+Since we have 18 years worth of data, let's plot the ozone concentration by year. To do this, we use the [ggplot](http://ggplot2.tidyverse.org/reference/) command coupled with the [geom_point](http://ggplot2.tidyverse.org/reference/geom_point.html) command.
+
+```{r}
+ggplot(data = data) + 
+  geom_point(mapping = aes(x = year, y = ozone_ppm))
+```
+
+Let's look more closely at the structure of this command.
+
+The `ggplot` command takes an argument naming the table containing your data. It is followed by a `+` at the end of the line that tells R to pass the information from the `ggplot` fuction onto the next function.
+
+The `geom_point` command takes an argument that specifies the mapping of variables in `data` to the X and Y axes. This is done through the [aes](https://www.rdocumentation.org/packages/ggplot2/versions/2.2.1/topics/aes) command, which takes `x` and `y` arguments. The general template (taken from [R for Data Science](http://r4ds.had.co.nz/)) is:
+
+```{r eval=FALSE}    
+  ggplot(data = <DATA>) + 
+    <GEOMETRY>(mapping = aes(<MAPPING>))
+```
+
+In the plot above we specified year on the X axis and ozone_ppm on the Y axis. Each point represents a single measurement taken over the course of one year. The points are stacked on top of each other and it is difficult to see if there is a trend across sites or over time. Which brings us to our first topic:
+
+## Filtering Data
+
+When you have almost a million data points, you have to find ways to filter subsets of the data. In R, we use the [filter](http://dplyr.tidyverse.org/reference/filter.html) command to subset rows. 
+
+Let's filter our data to only retain data from 2002.
+
+```{r}
+ozone2002 <- filter(data, year == 2002)
+```
+
+Let's plot ozone versus hour in 2002 for all sites.
+
+```{r}
+ggplot(data = ozone2002) +
+  geom_point(mapping = aes(x = hour, y = ozone_ppm))
+```
+
+Again, there are a lot of points and we can't see what's happening at each of the 10 sampling sites. 
+
+## Smoothing Data
+
+So far, we have plotted individual data points. But it is difficult to see trends over time. To do this, we need a function that summarizes the points by smoothing them. This is a news type of geometry called [geom_smooth](http://ggplot2.tidyverse.org/reference/geom_smooth.html).
+
+```{r}
+ggplot(data = ozone2002) +
+  geom_point(mapping = aes(x = hour, y = ozone_ppm)) + 
+  geom_smooth(mapping = aes(x = hour, y = ozone_ppm))
+```
+
+There is a lot happening in this statement. We tell R that we want to use the 2002 data. Then, we tell it to plots all of the ozone values by hour as points. Then, we add another *layer* of information by adding a smoothing line. This`geom_smooth` takes the data and applies a smoothing function to estimate a curve that summarizes the data. This ability to add layers of information is a powerful feature of `ggplot`.
+
+Do you see and ozone pattern in the smoothed curve? When is ozone lowest? When is ozone highest?
+
+One thing that you may have noticed in the plotting command above is that we had to type out the aesthetics twice, once for the `geom_point` command and once for the `geom_smooth` command. If we know that we'll be using the same aesthetics for both plots, we can save typing by providing the aesthetics to the `ggplot` command. The aesthetics will then be inherited by `geom_point` and `geom_smooth`.
+
+```{r}
+ggplot(data = ozone2002, mapping = aes(x = hour, y = ozone_ppm)) +
+  geom_point() + 
+  geom_smooth()
+```
+
+This plot is the same as the plot above, but with less typing.
+
+The view above plots ozone values for all sites. But we have 10 sites and it would be nice to see the trend across all sites. One way to do this is to add multiple smoothing lines, each colored by site. To do this, we add a `color` argument to the [aesthetics](https://www.rdocumentation.org/packages/ggplot2/versions/2.2.1/topics/aes).
+
+```{r}
+ggplot(data = ozone2002, mapping = aes(x = hour, y = ozone_ppm, color = site_name)) +
+  geom_point() + 
+  geom_smooth()
+```
+
+This is colorful, but the points don't really add much to the plot. Let's remove the points layer.
+
+```{r}
+ggplot(data = ozone2002, mapping = aes(x = hour, y = ozone_ppm, color = site_name)) +
+  geom_smooth()
+```
+
+This is nice! We can see the daily change in ozone at each site. Which sites have large changes in ozone? Which ones have small changes? Is there a pattern in the time of day when ozone reaches its maximum across sites?
+
+## Facets
+
+In the plot above we drew all 10 sites in a single panel. What if we wanted to plot each site in a separate pane? To do this, we need to use facets, which allow us to place mulitple panels in a plot. [facet_wrap](http://ggplot2.tidyverse.org/reference/facet_wrap.html) is a function that we can add to our plot code that will place multiple panels (or facets) on the plot. In this case, we will tell R to make one facet per site.
+
+```{r}
+ggplot(data = ozone2002, mapping = aes(x = hour, y = ozone_ppm)) +
+  geom_smooth() +
+  facet_wrap(~site_name)
+```
+
+In some ways, this view is easier to interpret than the plot in which all of the sites are in a single panel. Depending on the point that you are trying to make about the data, you may use a single panel of muliple panels.
+
+Faceting is another way to subset data when plotting. It is added to the end of our plotting template:
+
+```{r eval=FALSE}    
+  ggplot(data = <DATA>) + 
+    <GEOMETRY>(mapping = aes(<MAPPING>)) +
+    <FACETS>
+```
+
+**Exercise:**
+
+* Use all of the data (the `data` variable) to plot hour on the X-axis and ozone on the Y-axis.
+* Use a different color for each site.
+* Plot each `month` in a different facet.
+
+```{r, eval=FALSE}
+ggplot(data, aes(hour, ozone_ppm, color = site_name)) +
+  geom_smooth() +
+  facet_wrap(~month)
+```
+
+This plot tells us a lot about the daily changes in ozone in each month or each site. 
+
+
+```{r}
+sites = distinct(data.frame(data$lon, data$lat))
+map = get_googlemap("Bangor, Maine", marker = sites, zoom = 7)
+ggmap(map)
+```
+```{r}
+ozone2002_mon = data %>% group_by(site_name, month, lat, lon) %>% summarize(maxoz = max(ozone_ppm))
+ggmap(map) + 
+geom_point(data = filter(ozone2002_mon, month == 8), aes(lon, lat, color = maxoz, fill = maxoz))
+```
+
+
+```{r}
+ozone2002_mon = data %>% group_by(site_name, month, lat, lon) %>% summarize(maxoz = max(ozone_ppm))
+ggmap(get_googlemap("Bangor, Maine", zoom = 7)) + 
+  stat_density2d(data = filter(ozone2002_mon, month == 8), aes(lon, lat, fill = ..level.., alpha = ..level..), geom = "polygon") +
+  scale_fill_continuous(low = "#000000", high = "#FFAA00") +
+  geom_point(data = filter(ozone2002_mon, month == 8), aes(lon, lat, color = maxoz)) +
+  scale_color_continuous(low = "#000000", high = "#FFAA00")
+```
+
