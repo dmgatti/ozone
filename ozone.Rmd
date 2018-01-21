@@ -188,9 +188,9 @@ This plot tells us a lot about the daily changes in ozone in each month or each 
 This is just a quick preview of some of the geographical plotting that is possible in R. The plot below shows the location of the ozone sampling sites. 
 
 ```{r}
-sites = distinct(data.frame(data$lon, data$lat))
-map = get_googlemap("Bangor, Maine", marker = sites, zoom = 7)
-ggmap(map)
+sites = distinct(data, lon, lat, site_name)
+map = get_googlemap("Bangor, Maine", markers = data.frame(select(sites, lon, lat)), zoom = 7)
+ggmap(map) + geom_text(data = sites, aes(x = lon, y = lat, label = site_name))
 ```
 
 This plot adds the color of the maximun ozone value to each site.
